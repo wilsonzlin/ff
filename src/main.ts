@@ -106,6 +106,8 @@ export const ffVideo = async ({
   }));
   audio: boolean | {
     codec: 'aac' | 'flac',
+    // Mix a single stereo stream into a mono stream.
+    downmix: boolean,
   };
   output: {
     format?: string;
@@ -115,7 +117,7 @@ export const ffVideo = async ({
   };
 }): Promise<void> => {
   const args = new Array<string | number>();
-  args.push('-loglevel', logLevel);
+  args.push(`-loglevel`, logLevel);
 
   // Input.
   ifDefined(input.start, ss => args.push(`-ss`, ss.toFixed(3)));
@@ -159,6 +161,7 @@ export const ffVideo = async ({
     audio ? args.push(`-c:a`, `copy`) : args.push(`-an`);
   } else {
     args.push(`-c:a`, audio.codec);
+    audio.downmix && args.push(`-ac`, 1);
   }
 
   // Output.
