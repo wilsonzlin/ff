@@ -105,10 +105,16 @@ export const ffVideo = async ({
     loop: boolean | number;
   }));
   audio: boolean | {
-    codec: 'aac' | 'flac',
     // Mix a single stereo stream into a mono stream.
     downmix: boolean,
-  };
+  } & ({
+    codec: 'aac',
+  } | {
+    codec: 'flac',
+  } | {
+    codec: 'libmp3lame',
+    quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
+  });
   output: {
     format?: string;
     file: string;
@@ -162,6 +168,9 @@ export const ffVideo = async ({
   } else {
     args.push(`-c:a`, audio.codec);
     audio.downmix && args.push(`-ac`, 1);
+    if (audio.codec == 'libmp3lame') {
+      args.push(`-q:a`, audio.quality);
+    }
   }
 
   // Output.
