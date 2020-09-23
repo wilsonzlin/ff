@@ -29,9 +29,9 @@ export const ffProbeVideo = async (file: string): Promise<MediaFileProperties> =
     );
     switch (sectionName) {
     case 'STREAM':
-      properties.videoCodec = values.codec_name;
       switch (values.codec_type) {
       case 'video':
+        properties.videoCodec = values.codec_name;
         properties.height = Number.parseInt(values.height, 10);
         properties.width = Number.parseInt(values.width, 10);
         properties.fps = values.r_frame_rate
@@ -40,6 +40,7 @@ export const ffProbeVideo = async (file: string): Promise<MediaFileProperties> =
           .reduce((numerator, denominator) => numerator / denominator);
         break;
       case 'audio':
+        properties.audioCodec = values.codec_name;
         break;
       }
       break;
