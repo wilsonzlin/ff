@@ -52,10 +52,11 @@ export const ffProbeVideo = async (file: string): Promise<MediaFileProperties> =
 };
 
 export const ffmpeg = async (...args: (string | number)[]): Promise<void> =>
-  job(`ffmpeg`, false, `-loglevel`, `fatal`, `-hide_banner`, `-y`, ...args);
+  job(`ffmpeg`, false, `-hide_banner`, `-y`, ...args);
 
 export const screenshot = async (src: string, pos: number, dest: string, scaleWidth: number): Promise<void> =>
   ffmpeg(
+    `-loglevel`, `fatal`,
     `-ss`, pos.toFixed(3),
     `-i`, src,
     `-filter:v`, `scale=${scaleWidth}:-1`,
@@ -64,13 +65,27 @@ export const screenshot = async (src: string, pos: number, dest: string, scaleWi
     dest,
   );
 
+export enum FfmpegLogLevel {
+  QUIET = 'quiet',
+  PANIC = 'panic',
+  FATAL = 'fatal',
+  ERROR = 'error',
+  WARNING = 'warning',
+  INFO = 'info',
+  VERBOSE = 'verbose',
+  DEBUG = 'debug',
+  TRACE = 'trace',
+}
+
 export const ffVideo = async ({
+  logLevel = FfmpegLogLevel.FATAL,
   input,
   metadata,
   video,
   audio,
   output,
 }: {
+  logLevel?: FfmpegLogLevel,
   input: {
     file: string;
     start?: number;
@@ -100,6 +115,7 @@ export const ffVideo = async ({
   };
 }): Promise<void> => {
   const args = new Array<string | number>();
+  args.push('-loglevel', logLevel);
 
   // Input.
   ifDefined(input.start, ss => args.push(`-ss`, ss.toFixed(3)));
