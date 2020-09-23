@@ -105,7 +105,7 @@ export const ffVideo = async ({
     loop: boolean | number;
   }));
   audio: boolean | {
-    codec: 'aac',
+    codec: 'aac' | 'flac',
   };
   output: {
     format?: string;
