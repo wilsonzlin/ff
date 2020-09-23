@@ -106,7 +106,7 @@ export const ffVideo = async ({
   }));
   audio: boolean | {
     // Mix a single stereo stream into a mono stream.
-    downmix: boolean,
+    downmix?: boolean,
   } & ({
     codec: 'aac',
   } | {
