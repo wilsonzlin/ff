@@ -23,9 +23,9 @@ export enum FfmpegLogLevel {
 }
 
 export type FfConfig = {
-  ffprobeCommand: string,
-  ffmpegCommand: string,
-  logLevel: FfmpegLogLevel,
+  ffprobeCommand: string;
+  ffmpegCommand: string;
+  logLevel: FfmpegLogLevel;
 }
 
 export class Ff {
@@ -38,7 +38,7 @@ export class Ff {
     await job(this.cfg.ffmpegCommand, false, `-hide_banner`, `-y`, ...args);
   }
 
-  ffProbeVideo = async (file: string): Promise<MediaFileProperties> => {
+  probe = async (file: string): Promise<MediaFileProperties> => {
     const raw = (await cmd(
       this.cfg.ffprobeCommand,
       `-v`, `error`,
@@ -91,7 +91,7 @@ export class Ff {
       dest,
     );
 
-  ffVideo = async ({
+  convert = async ({
     logLevel = this.cfg.logLevel,
     input,
     metadata,
@@ -107,7 +107,7 @@ export class Ff {
     };
     metadata: boolean;
     video: boolean | ({
-      fps?: number,
+      fps?: number;
       resize?: { width: number };
     } & ({
       codec: 'libx264';
@@ -115,19 +115,26 @@ export class Ff {
       crf: number;
       faststart: boolean;
     } | {
-      codec: 'gif',
+      codec: 'gif';
       loop: boolean | number;
     }));
     audio: boolean | {
+      samplingRate?: number;
       // Mix a single stereo stream into a mono stream.
-      downmix?: boolean,
+      downmix?: boolean;
     } & ({
-      codec: 'aac',
+      codec: 'aac';
     } | {
-      codec: 'flac',
+      codec: 'flac';
     } | {
-      codec: 'libmp3lame',
-      quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9,
+      codec: 'libmp3lame';
+      quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+    } | {
+      codec: 'pcm';
+      signedness: 's' | 'u';
+      bits: 8 | 16 | 24 | 32 | 64;
+      // Omit if 8 bits.
+      endianness?: 'be' | 'le';
     });
     output: {
       format?: string;
@@ -180,7 +187,7 @@ export class Ff {
     if (typeof audio == 'boolean') {
       audio ? args.push(`-c:a`, `copy`) : args.push(`-an`);
     } else {
-      args.push(`-c:a`, audio.codec);
+      args.push(`-c:a`, audio.codec == 'pcm' ? `pcm_${audio.signedness}${audio.bits}${audio.endianness ?? ''}` : audio.codec);
       audio.downmix && args.push(`-ac`, 1);
       if (audio.codec == 'libmp3lame') {
         args.push(`-q:a`, audio.quality);
