@@ -94,7 +94,7 @@ export class Ff {
     return properties;
   };
 
-  screenshot = async ({
+  extractFrame = async ({
     src,
     pos,
     dest,
