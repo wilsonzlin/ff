@@ -94,14 +94,27 @@ export class Ff {
     return properties;
   };
 
-  screenshot = async (src: string, pos: number, dest: string, scaleWidth?: number): Promise<void> =>
+  screenshot = async ({
+    src,
+    pos,
+    dest,
+    scaleWidth,
+    // Do not use a default value, as not all formats use this.
+    quality,
+  }: {
+    src: string,
+    pos: number,
+    dest: string,
+    scaleWidth?: number,
+    quality?: number,
+  }): Promise<void> =>
     this.ffmpeg(
       `-loglevel`, this.cfg.logLevel,
       `-ss`, pos.toFixed(3),
       `-i`, src,
       ...mapDefined(scaleWidth, scaleWidth => [`-filter:v`, `scale=${scaleWidth}:-1`]) ?? [],
       `-frames:v`, 1,
-      `-q:v`, 2,
+      ...mapDefined(quality, quality => [`-q:v`, 2]) ?? [],
       dest,
     );
 
