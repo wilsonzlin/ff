@@ -95,27 +95,27 @@ export class Ff {
   };
 
   extractFrame = async ({
-    src,
-    pos,
-    dest,
+    input,
+    timestamp,
+    output,
     scaleWidth,
     // Do not use a default value, as not all formats use this.
     quality,
   }: {
-    src: string,
-    pos: number,
-    dest: string,
+    input: string,
+    timestamp: number,
+    output: string,
     scaleWidth?: number,
     quality?: number,
   }): Promise<void> =>
     this.ffmpeg(
       `-loglevel`, this.cfg.logLevel,
-      `-ss`, pos.toFixed(3),
-      `-i`, src,
+      `-ss`, timestamp.toFixed(3),
+      `-i`, input,
       ...mapDefined(scaleWidth, scaleWidth => [`-filter:v`, `scale=${scaleWidth}:-1`]) ?? [],
       `-frames:v`, 1,
-      ...mapDefined(quality, quality => [`-q:v`, 2]) ?? [],
-      dest,
+      ...mapDefined(quality, quality => [`-q:v`, quality]) ?? [],
+      output,
     );
 
   convert = async ({
