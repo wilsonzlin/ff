@@ -28,10 +28,23 @@ export type FfConfig = {
   logLevel: FfmpegLogLevel;
 }
 
+const createCfg = ({
+  logLevel = FfmpegLogLevel.ERROR,
+  ffmpegCommand = 'ffmpeg',
+  ffprobeCommand = 'ffprobe',
+}: Partial<FfConfig>): FfConfig => ({
+  ffmpegCommand,
+  ffprobeCommand,
+  logLevel,
+});
+
 export class Ff {
+  private readonly cfg: FfConfig;
+
   constructor (
-    private readonly cfg: FfConfig,
+    cfg: Partial<FfConfig> = {},
   ) {
+    this.cfg = createCfg(cfg);
   }
 
   private async ffmpeg (...args: (string | number)[]): Promise<void> {
