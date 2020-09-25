@@ -1,4 +1,5 @@
 import {ifDefined} from 'extlib/js/optional/cond';
+import {mapDefined} from 'extlib/js/optional/map';
 import {cmd, job} from './exec';
 
 export type MediaFileProperties = {
@@ -93,12 +94,12 @@ export class Ff {
     return properties;
   };
 
-  screenshot = async (src: string, pos: number, dest: string, scaleWidth: number): Promise<void> =>
+  screenshot = async (src: string, pos: number, dest: string, scaleWidth?: number): Promise<void> =>
     this.ffmpeg(
       `-loglevel`, this.cfg.logLevel,
       `-ss`, pos.toFixed(3),
       `-i`, src,
-      `-filter:v`, `scale=${scaleWidth}:-1`,
+      ...mapDefined(scaleWidth, scaleWidth => [`-filter:v`, `scale=${scaleWidth}:-1`]) ?? [],
       `-frames:v`, 1,
       `-q:v`, 2,
       dest,
