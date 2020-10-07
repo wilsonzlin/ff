@@ -1,14 +1,41 @@
+import {execFile, spawn} from 'child_process';
 import {ifDefined} from 'extlib/js/optional/cond';
 import {mapDefined} from 'extlib/js/optional/map';
-import {cmd, job} from './exec';
+
+const cmd = async (command: string, args: string[]): Promise<string> =>
+  new Promise((resolve, reject) =>
+    execFile(command, args, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else if (stderr) {
+        reject(new Error(`stderr: ${stderr}`));
+      } else {
+        resolve(stdout);
+      }
+    }));
+
+const job = async (command: string, args: string[]): Promise<void> =>
+  new Promise(resolve => {
+    const proc = spawn(command, args.map(String), {stdio: ['ignore', 'inherit', 'inherit']});
+    proc.on('error', console.error);
+    proc.on('exit', () => resolve());
+  });
+
 
 export type MediaFileProperties = {
-  height: number;
-  width: number;
-  fps: number;
+  video?: {
+    codec: string;
+    height: number;
+    width: number;
+    fps: number;
+  };
+  audio?: {
+    codec: string;
+    channels: number;
+    bitRate: number;
+    sampleRate: number;
+  };
   duration: number;
-  audioCodec: string;
-  videoCodec: string;
 };
 
 export enum FfmpegLogLevel {
@@ -27,16 +54,22 @@ export type FfConfig = {
   ffprobeCommand: string;
   ffmpegCommand: string;
   logLevel: FfmpegLogLevel;
+  runCommandWithoutStdout: (command: string, args: string[]) => Promise<void>;
+  runCommandWithStdout: (command: string, args: string[]) => Promise<string>;
 }
 
 const createCfg = ({
-  logLevel = FfmpegLogLevel.ERROR,
   ffmpegCommand = 'ffmpeg',
   ffprobeCommand = 'ffprobe',
+  logLevel = FfmpegLogLevel.ERROR,
+  runCommandWithoutStdout = job,
+  runCommandWithStdout = cmd,
 }: Partial<FfConfig>): FfConfig => ({
   ffmpegCommand,
   ffprobeCommand,
   logLevel,
+  runCommandWithoutStdout,
+  runCommandWithStdout,
 });
 
 export class Ff {
@@ -48,20 +81,18 @@ export class Ff {
     this.cfg = createCfg(cfg);
   }
 
-  private async ffmpeg (...args: (string | number)[]): Promise<void> {
-    await job(this.cfg.ffmpegCommand, false, `-hide_banner`, `-y`, ...args);
-  }
-
   probe = async (file: string): Promise<MediaFileProperties> => {
     const raw = (await cmd(
       this.cfg.ffprobeCommand,
-      `-v`, `error`,
-      `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate:format=duration`,
-      `-ignore_chapters`, 1,
-      file,
+      [
+        `-v`, `error`,
+        `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate:format=duration`,
+        `-ignore_chapters`, 1,
+        file,
+      ].map(String),
     )).trim();
 
-    const properties: MediaFileProperties = {} as any;
+    const properties = {} as MediaFileProperties;
     for (const [_, sectionName, sectionData] of raw.matchAll(/\[([A-Z]+)]([^\[]*)\[\/\1]/g)) {
       const values: { [key: string]: string } = Object.fromEntries(
         sectionData
@@ -73,16 +104,23 @@ export class Ff {
       case 'STREAM':
         switch (values.codec_type) {
         case 'video':
-          properties.videoCodec = values.codec_name;
-          properties.height = Number.parseInt(values.height, 10);
-          properties.width = Number.parseInt(values.width, 10);
-          properties.fps = values.r_frame_rate
-            .split('/')
-            .map(p => Number.parseInt(p, 10))
-            .reduce((numerator, denominator) => numerator / denominator);
+          properties.video = {
+            codec: values.codec_name,
+            height: Number.parseInt(values.height, 10),
+            width: Number.parseInt(values.width, 10),
+            fps: values.r_frame_rate
+              .split('/')
+              .map(p => Number.parseInt(p, 10))
+              .reduce((numerator, denominator) => numerator / denominator),
+          };
           break;
         case 'audio':
-          properties.audioCodec = values.codec_name;
+          properties.audio = {
+            codec: values.codec_name,
+            bitRate: Number.parseInt(values.bit_rate, 10),
+            channels: Number.parseInt(values.channels, 10),
+            sampleRate: Number.parseInt(values.sample_rate, 10),
+          };
           break;
         }
         break;
@@ -229,4 +267,8 @@ export class Ff {
 
     await this.ffmpeg(...args);
   };
+
+  private async ffmpeg (...args: (string | number)[]): Promise<void> {
+    await job(this.cfg.ffmpegCommand, [`-hide_banner`, `-y`, ...args.map(String)]);
+  }
 }
