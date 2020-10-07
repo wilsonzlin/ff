@@ -36,6 +36,8 @@ export type MediaFileProperties = {
     sampleRate: number;
   };
   duration: number;
+  format: string;
+  size: number;
 };
 
 export enum FfmpegLogLevel {
@@ -126,6 +128,8 @@ export class Ff {
         break;
       case 'FORMAT':
         properties.duration = Number.parseFloat(values.duration);
+        properties.format = values.format_name;
+        properties.size = Number.parseInt(values.size);
         break;
       }
     }
