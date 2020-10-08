@@ -88,7 +88,7 @@ export class Ff {
       this.cfg.ffprobeCommand,
       [
         `-v`, `error`,
-        `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate:format=duration`,
+        `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name`,
         `-ignore_chapters`, 1,
         file,
       ].map(String),
