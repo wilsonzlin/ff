@@ -177,7 +177,10 @@ export class Ff {
     metadata: boolean;
     video: boolean | ({
       fps?: number;
-      resize?: { width: number };
+      resize?: {
+        height?: number;
+        width?: number;
+      };
     } & ({
       codec: 'libx264';
       preset: 'ultrafast' | 'superfast' | 'veryfast' | 'faster' | 'fast' | 'medium' | 'slow' | 'slower' | 'veryslow';
@@ -229,7 +232,8 @@ export class Ff {
     } else {
       const filters = new Array<string>();
       ifDefined(video.fps, (fps) => filters.push(`fps=${fps}`));
-      ifDefined(video.resize, ({width}) => filters.push(`scale=${width}:-2`));
+      // `-2` means proportional width/height.
+      ifDefined(video.resize, ({width = -2, height = -2}) => filters.push(`scale=${width}:${height}`));
       if (filters.length) {
         args.push(`-filter:v`, filters.join(','));
       }
