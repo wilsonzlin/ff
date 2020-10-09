@@ -89,7 +89,7 @@ export class Ff {
       [
         `-v`, `error`,
         `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name`,
-        `-ignore_chapters`, 1,
+        // TODO We originally used ignore_chapters to suppress errors with some corrupted videos, but the option will cause an error on codecs that don't have the concept of chapters (e.g. AAC).
         file,
       ].map(String),
     )).trim();
