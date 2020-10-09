@@ -84,7 +84,7 @@ export class Ff {
   }
 
   probe = async (file: string): Promise<MediaFileProperties> => {
-    const raw = (await cmd(
+    const raw = (await this.cfg.runCommandWithStdout(
       this.cfg.ffprobeCommand,
       [
         `-v`, `error`,
@@ -277,6 +277,6 @@ export class Ff {
   };
 
   private async ffmpeg (...args: (string | number)[]): Promise<void> {
-    await job(this.cfg.ffmpegCommand, [`-hide_banner`, `-y`, ...args.map(String)]);
+    await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, [`-hide_banner`, `-y`, ...args.map(String)]);
   }
 }
