@@ -32,7 +32,7 @@ export type MediaFileProperties = {
   audio?: {
     codec: string;
     channels: number;
-    bitRate: number;
+    bitRate?: number;
     sampleRate: number;
   };
   duration: number;
@@ -119,7 +119,7 @@ export class Ff {
         case 'audio':
           properties.audio = {
             codec: values.codec_name,
-            bitRate: Number.parseInt(values.bit_rate, 10),
+            bitRate: values.bit_rate === 'N/A' ? undefined : Number.parseInt(values.bit_rate, 10),
             channels: Number.parseInt(values.channels, 10),
             sampleRate: Number.parseInt(values.sample_rate, 10),
           };
@@ -262,6 +262,7 @@ export class Ff {
     } else {
       args.push(`-c:a`, audio.codec == 'pcm' ? `pcm_${audio.signedness}${audio.bits}${audio.endianness ?? ''}` : audio.codec);
       audio.downmix && args.push(`-ac`, 1);
+      audio.samplingRate && args.push(`-ar`, audio.samplingRate);
       if (audio.codec == 'libmp3lame') {
         args.push(`-q:a`, audio.quality);
       }
