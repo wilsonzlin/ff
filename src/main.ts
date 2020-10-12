@@ -87,8 +87,10 @@ export class Ff {
     const raw = (await this.cfg.runCommandWithStdout(
       this.cfg.ffprobeCommand,
       [
-        `-v`, `error`,
-        `-show_entries`, `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name`,
+        `-v`,
+        `error`,
+        `-show_entries`,
+        `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name`,
         // TODO We originally used ignore_chapters to suppress errors with some corrupted videos, but the option will cause an error on codecs that don't have the concept of chapters (e.g. AAC).
         file,
       ].map(String),
@@ -137,25 +139,27 @@ export class Ff {
   };
 
   extractFrame = async ({
+    fps,
     input,
-    timestamp,
     output,
     scaleWidth,
+    timestamp,
     // Do not use a default value, as not all formats use this.
     quality,
   }: {
+    fps?: number | [number, number],
     input: string,
-    timestamp: number,
     output: string,
-    scaleWidth?: number,
     quality?: number,
+    scaleWidth?: number,
+    timestamp?: number,
   }): Promise<void> =>
     this.ffmpeg(
       `-loglevel`, this.cfg.logLevel,
-      `-ss`, timestamp.toFixed(3),
+      ...mapDefined(timestamp, timestamp => [`-ss`, timestamp.toFixed(3)]) ?? [],
       `-i`, input,
       ...mapDefined(scaleWidth, scaleWidth => [`-filter:v`, `scale=${scaleWidth}:-1`]) ?? [],
-      `-frames:v`, 1,
+      ...mapDefined(fps, fps => ['-vf', Array.isArray(fps) ? fps.join('/') : fps]) ?? [`-frames:v`, 1],
       ...mapDefined(quality, quality => [`-q:v`, quality]) ?? [],
       output,
     );
