@@ -159,7 +159,7 @@ export class Ff {
       ...mapDefined(timestamp, timestamp => [`-ss`, timestamp.toFixed(3)]) ?? [],
       `-i`, input,
       ...mapDefined(scaleWidth, scaleWidth => [`-filter:v`, `scale=${scaleWidth}:-1`]) ?? [],
-      ...mapDefined(fps, fps => ['-vf', Array.isArray(fps) ? fps.join('/') : fps]) ?? [`-frames:v`, 1],
+      ...mapDefined(fps, fps => ['-vf', `fps=${Array.isArray(fps) ? fps.join('/') : fps}`]) ?? [`-frames:v`, 1],
       ...mapDefined(quality, quality => [`-q:v`, quality]) ?? [],
       output,
     );
