@@ -165,6 +165,7 @@ export class Ff {
     );
 
   convert = async ({
+    threads,
     logLevel = this.cfg.logLevel,
     input,
     metadata,
@@ -172,6 +173,7 @@ export class Ff {
     audio,
     output,
   }: {
+    threads?: number,
     logLevel?: FfmpegLogLevel,
     input: {
       file: string;
@@ -221,6 +223,8 @@ export class Ff {
   }): Promise<void> => {
     const args = new Array<string | number>();
     args.push(`-loglevel`, logLevel);
+
+    ifDefined(threads, t => args.push(`-threads`, t));
 
     // Input.
     ifDefined(input.start, ss => args.push(`-ss`, ss.toFixed(3)));
