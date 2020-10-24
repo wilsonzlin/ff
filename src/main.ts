@@ -195,6 +195,8 @@ export class Ff {
     } | {
       codec: 'gif';
       loop: boolean | number;
+    } | {
+      codec: 'copy';
     }));
     audio: boolean | {
       samplingRate?: number;
@@ -213,6 +215,8 @@ export class Ff {
       bits: 8 | 16 | 24 | 32 | 64;
       // Omit if 8 bits.
       endianness?: 'be' | 'le';
+    } | {
+      codec: 'copy';
     });
     output: {
       format?: string;
