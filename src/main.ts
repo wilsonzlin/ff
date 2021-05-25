@@ -56,6 +56,7 @@ export type FfConfig = {
   ffprobeCommand: string;
   ffmpegCommand: string;
   logLevel: FfmpegLogLevel;
+  logCommandBeforeRunning: boolean;
   runCommandWithoutStdout: (command: string, args: string[]) => Promise<void>;
   runCommandWithStdout: (command: string, args: string[]) => Promise<string>;
 }
@@ -64,12 +65,14 @@ const createCfg = ({
   ffmpegCommand = 'ffmpeg',
   ffprobeCommand = 'ffprobe',
   logLevel = FfmpegLogLevel.ERROR,
+  logCommandBeforeRunning = false,
   runCommandWithoutStdout = job,
   runCommandWithStdout = cmd,
 }: Partial<FfConfig>): FfConfig => ({
   ffmpegCommand,
   ffprobeCommand,
   logLevel,
+  logCommandBeforeRunning,
   runCommandWithoutStdout,
   runCommandWithStdout,
 });
@@ -290,6 +293,10 @@ export class Ff {
   };
 
   private async ffmpeg (...args: (string | number)[]): Promise<void> {
-    await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, [`-hide_banner`, `-y`, ...args.map(String)]);
+    const fullArgs = [`-hide_banner`, `-y`, ...args.map(String)];
+    if (this.cfg.logCommandBeforeRunning) {
+      console.debug("+", this.cfg.ffmpegCommand, ...fullArgs)
+    }
+    await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, fullArgs);
   }
 }
