@@ -1,6 +1,7 @@
 import {execFile, spawn} from 'child_process';
-import {ifDefined} from 'extlib/js/optional/cond';
-import {mapDefined} from 'extlib/js/optional/map';
+import ifDefined from 'extlib/js/ifDefined';
+import mapDefined from 'extlib/js/mapDefined';
+import splitString from 'extlib/js/splitString';
 
 const cmd = async (command: string, args: string[]): Promise<string> =>
   new Promise((resolve, reject) =>
@@ -38,6 +39,9 @@ export type MediaFileProperties = {
   duration: number;
   format: string;
   size: number;
+  metadata: {
+    [name: string]: string;
+  }
 };
 
 export enum FfmpegLogLevel {
@@ -93,7 +97,7 @@ export class Ff {
         `-v`,
         `error`,
         `-show_entries`,
-        `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name`,
+        `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name:format_tags`,
         // TODO We originally used ignore_chapters to suppress errors with some corrupted videos, but the option will cause an error on codecs that don't have the concept of chapters (e.g. AAC).
         file,
       ].map(String),
@@ -105,7 +109,7 @@ export class Ff {
         sectionData
           .trim()
           .split(/[\r\n]+/)
-          .map(kv => kv.split('=', 2)),
+          .map(kv => splitString(kv, '=', 2)),
       );
       switch (sectionName) {
       case 'STREAM':
@@ -135,6 +139,12 @@ export class Ff {
         properties.duration = Number.parseFloat(values.duration);
         properties.format = values.format_name;
         properties.size = Number.parseInt(values.size);
+        properties.metadata = Object.create(null);
+        for (const [prop, val] of Object.entries(values)) {
+          if (prop.startsWith('TAG:')) {
+            properties.metadata[prop.slice(4)] = val;
+          }
+        }
         break;
       }
     }
@@ -295,7 +305,7 @@ export class Ff {
   private async ffmpeg (...args: (string | number)[]): Promise<void> {
     const fullArgs = [`-hide_banner`, `-y`, ...args.map(String)];
     if (this.cfg.logCommandBeforeRunning) {
-      console.debug("+", this.cfg.ffmpegCommand, ...fullArgs)
+      console.debug('+', this.cfg.ffmpegCommand, ...fullArgs);
     }
     await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, fullArgs);
   }
