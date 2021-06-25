@@ -104,7 +104,7 @@ export class Ff {
     )).trim();
 
     const properties = {} as MediaFileProperties;
-    for (const [_, sectionName, sectionData] of raw.matchAll(/\[([A-Z]+)]([^\[]*)\[\/\1]/g)) {
+    for (const [_, sectionName, sectionData] of raw.matchAll(/(^|\n)\[([A-Z]+)]([^\[]*)\n\[\/\2]/g)) {
       const values: { [key: string]: string } = Object.fromEntries(
         sectionData
           .trim()
