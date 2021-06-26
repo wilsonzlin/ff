@@ -22,7 +22,6 @@ const job = async (command: string, args: string[]): Promise<void> =>
     proc.on('exit', () => resolve());
   });
 
-
 export type MediaFileProperties = {
   video?: {
     codec: string;
@@ -195,6 +194,10 @@ export class Ff {
     };
     metadata: boolean;
     video: boolean | ({
+      filter?: string;
+    } & ({
+      codec: 'copy';
+    } | ({
       fps?: number;
       resize?: {
         height?: number;
@@ -208,13 +211,12 @@ export class Ff {
     } | {
       codec: 'gif';
       loop: boolean | number;
-    } | {
-      codec: 'copy';
-    }));
-    audio: boolean | {
+    }))));
+    audio: boolean | ({
       samplingRate?: number;
       // Mix a single stereo stream into a mono stream.
       downmix?: boolean;
+      filter?: string;
     } & ({
       codec: 'aac';
     } | {
@@ -230,7 +232,7 @@ export class Ff {
       endianness?: 'be' | 'le';
     } | {
       codec: 'copy';
-    });
+    }));
     output: {
       format?: string;
       file: string;
@@ -255,29 +257,35 @@ export class Ff {
     if (typeof video == 'boolean') {
       video ? args.push(`-c:v`, `copy`) : args.push(`-vn`);
     } else {
-      const filters = new Array<string>();
-      ifDefined(video.fps, (fps) => filters.push(`fps=${fps}`));
-      // `-2` means proportional width/height.
-      ifDefined(video.resize, ({width = -2, height = -2}) => filters.push(`scale=${width}:${height}`));
-      if (filters.length) {
-        args.push(`-filter:v`, filters.join(','));
-      }
-
-      args.push(`-c:v`, video.codec);
-      switch (video.codec) {
-      case 'libx264':
-        args.push(`-preset`, video.preset);
-        args.push(`-crf`, video.crf);
-        video.faststart && args.push(`-movflags`, `faststart`);
-        args.push(`-max_muxing_queue_size`, 1048576);
-        break;
-      case 'gif':
-        if (typeof video.loop == 'boolean') {
-          args.push(`-loop`, video.loop ? 0 : -1);
-        } else {
-          args.push(`-loop`, video.loop);
+      if (video.codec == 'copy') {
+        ifDefined(video.filter, filter => args.push('-filter:v', filter));
+        args.push(`-c:v`, `copy`);
+      } else {
+        const filters = new Array<string>();
+        ifDefined(video.fps, (fps) => filters.push(`fps=${fps}`));
+        // `-2` means proportional width/height.
+        ifDefined(video.resize, ({width = -2, height = -2}) => filters.push(`scale=${width}:${height}`));
+        ifDefined(video.filter, f => filters.push(f));
+        if (filters.length) {
+          args.push(`-filter:v`, filters.join(','));
         }
-        break;
+
+        args.push(`-c:v`, video.codec);
+        switch (video.codec) {
+        case 'libx264':
+          args.push(`-preset`, video.preset);
+          args.push(`-crf`, video.crf);
+          video.faststart && args.push(`-movflags`, `faststart`);
+          args.push(`-max_muxing_queue_size`, 1048576);
+          break;
+        case 'gif':
+          if (typeof video.loop == 'boolean') {
+            args.push(`-loop`, video.loop ? 0 : -1);
+          } else {
+            args.push(`-loop`, video.loop);
+          }
+          break;
+        }
       }
     }
 
@@ -285,6 +293,7 @@ export class Ff {
     if (typeof audio == 'boolean') {
       audio ? args.push(`-c:a`, `copy`) : args.push(`-an`);
     } else {
+      ifDefined(audio.filter, f => args.push(`-af`, f));
       args.push(`-c:a`, audio.codec == 'pcm' ? `pcm_${audio.signedness}${audio.bits}${audio.endianness ?? ''}` : audio.codec);
       audio.downmix && args.push(`-ac`, 1);
       audio.samplingRate && args.push(`-ar`, audio.samplingRate);
