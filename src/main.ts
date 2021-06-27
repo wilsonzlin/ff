@@ -3,12 +3,12 @@ import ifDefined from 'extlib/js/ifDefined';
 import mapDefined from 'extlib/js/mapDefined';
 import splitString from 'extlib/js/splitString';
 
-const cmd = async (command: string, args: string[]): Promise<string> =>
+const cmd = async (command: string, args: string[], throwOnStderr: boolean): Promise<string> =>
   new Promise((resolve, reject) =>
     execFile(command, args, (error, stdout, stderr) => {
       if (error) {
         reject(error);
-      } else if (stderr) {
+      } else if (stderr && throwOnStderr) {
         reject(new Error(`stderr: ${stderr}`));
       } else {
         resolve(stdout);
@@ -61,7 +61,7 @@ export type FfConfig = {
   logLevel: FfmpegLogLevel;
   logCommandBeforeRunning: boolean;
   runCommandWithoutStdout: (command: string, args: string[]) => Promise<void>;
-  runCommandWithStdout: (command: string, args: string[]) => Promise<string>;
+  runCommandWithStdout: (command: string, args: string[], throwOnStdout: boolean) => Promise<string>;
 }
 
 const createCfg = ({
@@ -89,7 +89,7 @@ export class Ff {
     this.cfg = createCfg(cfg);
   }
 
-  probe = async (file: string): Promise<MediaFileProperties> => {
+  probe = async (file: string, throwOnStderr: boolean = false): Promise<MediaFileProperties> => {
     const raw = (await this.cfg.runCommandWithStdout(
       this.cfg.ffprobeCommand,
       [
@@ -100,6 +100,7 @@ export class Ff {
         // TODO We originally used ignore_chapters to suppress errors with some corrupted videos, but the option will cause an error on codecs that don't have the concept of chapters (e.g. AAC).
         file,
       ].map(String),
+      throwOnStderr,
     )).trim();
 
     const properties = {} as MediaFileProperties;
