@@ -1,7 +1,6 @@
 import { execFile, spawn } from "child_process";
 import ifDefined from "extlib/js/ifDefined";
 import mapDefined from "extlib/js/mapDefined";
-import splitString from "extlib/js/splitString";
 
 const cmd = async (
   command: string,
@@ -246,7 +245,13 @@ export class Ff {
                     | "slower"
                     | "veryslow";
                   crf: number;
-                  faststart: boolean;
+                  movflags: (
+                    | "default_base_moof"
+                    | "empty_moov"
+                    | "faststart"
+                    | "frag_every_frame"
+                    | "frag_keyframe"
+                  )[];
                 }
               | {
                   codec: "gif";
@@ -271,6 +276,9 @@ export class Ff {
           | {
               codec: "libmp3lame";
               quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+            }
+          | {
+              codec: "libvorbis";
             }
           | {
               codec: "pcm";
@@ -327,7 +335,9 @@ export class Ff {
           case "libx264":
             args.push(`-preset`, video.preset);
             args.push(`-crf`, video.crf);
-            video.faststart && args.push(`-movflags`, `faststart`);
+            if (video.movflags.length) {
+              args.push(`-movflags`, video.movflags.join("+"));
+            }
             args.push(`-max_muxing_queue_size`, 1048576);
             break;
           case "gif":
