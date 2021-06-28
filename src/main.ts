@@ -196,7 +196,7 @@ export class Ff {
           `error`,
           `-print_format`,
           `json`,
-          `-show_stream`,
+          `-show_streams`,
           `-show_format`,
           file,
         ].map(String),
