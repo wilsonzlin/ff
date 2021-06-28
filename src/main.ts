@@ -117,23 +117,25 @@ export type ffprobeVideoStream = {
   };
 };
 
+export type ffprobeFormat = {
+  filename: string;
+  nb_streams: number;
+  nb_programs: number;
+  format_name: string;
+  format_long_name: string;
+  start_time: string;
+  duration: string;
+  size: string;
+  bit_rate: string;
+  probe_score: number;
+  tags: {
+    [name: string]: string;
+  };
+};
+
 export type ffprobeOutput = {
   streams: Array<ffprobeAudioStream | ffprobeVideoStream>;
-  format: {
-    filename: string;
-    nb_streams: number;
-    nb_programs: number;
-    format_name: string;
-    format_long_name: string;
-    start_time: string;
-    duration: string;
-    size: string;
-    bit_rate: string;
-    probe_score: number;
-    tags: {
-      [name: string]: string;
-    };
-  };
+  format: ffprobeFormat;
 };
 
 export enum FfmpegLogLevel {
