@@ -28,56 +28,97 @@ const job = async (command: string, args: string[]): Promise<void> =>
     proc.on("exit", () => resolve());
   });
 
+export type ffprobeAudioStream = {
+  index: number;
+  codec_name: string;
+  codec_long_name: string;
+  profile: string;
+  codec_type: "audio";
+  codec_time_base: string;
+  codec_tag_string: string;
+  codec_tag: string;
+  sample_fmt: string;
+  sample_rate: string;
+  channels: number;
+  channel_layout: string;
+  bits_per_sample: number;
+  r_frame_rate: string;
+  avg_frame_rate: string;
+  time_base: string;
+  duration_ts: number;
+  duration: string;
+  bit_rate: string;
+  disposition: {
+    default: number;
+    dub: number;
+    original: number;
+    comment: number;
+    lyrics: number;
+    karaoke: number;
+    forced: number;
+    hearing_impaired: number;
+    visual_impaired: number;
+    clean_effects: number;
+    attached_pic: number;
+    timed_thumbnails: number;
+  };
+  tags: {
+    [name: string]: string;
+  };
+};
+
+export type ffprobeVideoStream = {
+  index: number;
+  codec_name: string;
+  codec_long_name: string;
+  profile: string;
+  codec_type: "video";
+  codec_time_base: string;
+  codec_tag_string: string;
+  codec_tag: string;
+  width: number;
+  height: number;
+  coded_width: number;
+  coded_height: number;
+  has_b_frames: number;
+  sample_aspect_ratio: string;
+  display_aspect_ratio: string;
+  pix_fmt: string;
+  level: number;
+  chroma_location: string;
+  refs: number;
+  is_avc: string;
+  nal_length_size: string;
+  r_frame_rate: string;
+  avg_frame_rate: string;
+  time_base: string;
+  start_pts: number;
+  start_time: string;
+  duration_ts: number;
+  duration: string;
+  bit_rate: string;
+  bits_per_raw_sample: string;
+  disposition: {
+    default: number;
+    dub: number;
+    original: number;
+    comment: number;
+    lyrics: number;
+    karaoke: number;
+    forced: number;
+    hearing_impaired: number;
+    visual_impaired: number;
+    clean_effects: number;
+    attached_pic: number;
+    timed_thumbnails: number;
+  };
+  tags: {
+    [name: string]: string;
+  };
+};
+
 export type ffprobeOutput = {
-  streams: Array<{
-    index: number;
-    codec_name: string;
-    codec_long_name: string;
-    profile: string;
-    codec_type: string;
-    codec_time_base: string;
-    codec_tag_string: string;
-    codec_tag: string;
-    width: number;
-    height: number;
-    coded_width: number;
-    coded_height: number;
-    has_b_frames: number;
-    sample_aspect_ratio: string;
-    display_aspect_ratio: string;
-    pix_fmt: string;
-    level: number;
-    chroma_location: string;
-    refs: number;
-    is_avc: string;
-    nal_length_size: string;
-    r_frame_rate: string;
-    avg_frame_rate: string;
-    time_base: string;
-    start_pts: number;
-    start_time: string;
-    duration_ts: number;
-    duration: string;
-    bit_rate: string;
-    bits_per_raw_sample: string;
-    disposition: {
-      default: number;
-      dub: number;
-      original: number;
-      comment: number;
-      lyrics: number;
-      karaoke: number;
-      forced: number;
-      hearing_impaired: number;
-      visual_impaired: number;
-      clean_effects: number;
-      attached_pic: number;
-      timed_thumbnails: number;
-    };
-    tags: {
-      [name: string]: string;
-    };
-  }>;
+  streams: Array<ffprobeAudioStream | ffprobeVideoStream>;
   format: {
     filename: string;
     nb_streams: number;
