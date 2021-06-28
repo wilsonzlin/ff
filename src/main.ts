@@ -29,24 +29,70 @@ const job = async (command: string, args: string[]): Promise<void> =>
     proc.on("exit", () => resolve());
   });
 
-export type MediaFileProperties = {
-  video?: {
-    codec: string;
-    height: number;
+type ffprobeOutput = {
+  streams: Array<{
+    index: number;
+    codec_name: string;
+    codec_long_name: string;
+    profile: string;
+    codec_type: string;
+    codec_time_base: string;
+    codec_tag_string: string;
+    codec_tag: string;
     width: number;
-    fps: number;
-  };
-  audio?: {
-    codec: string;
-    channels: number;
-    bitRate?: number;
-    sampleRate: number;
-  };
-  duration: number;
-  format: string;
-  size: number;
-  metadata: {
-    [name: string]: string;
+    height: number;
+    coded_width: number;
+    coded_height: number;
+    has_b_frames: number;
+    sample_aspect_ratio: string;
+    display_aspect_ratio: string;
+    pix_fmt: string;
+    level: number;
+    chroma_location: string;
+    refs: number;
+    is_avc: string;
+    nal_length_size: string;
+    r_frame_rate: string;
+    avg_frame_rate: string;
+    time_base: string;
+    start_pts: number;
+    start_time: string;
+    duration_ts: number;
+    duration: string;
+    bit_rate: string;
+    bits_per_raw_sample: string;
+    disposition: {
+      default: number;
+      dub: number;
+      original: number;
+      comment: number;
+      lyrics: number;
+      karaoke: number;
+      forced: number;
+      hearing_impaired: number;
+      visual_impaired: number;
+      clean_effects: number;
+      attached_pic: number;
+      timed_thumbnails: number;
+    };
+    tags: {
+      [name: string]: string;
+    };
+  }>;
+  format: {
+    filename: string;
+    nb_streams: number;
+    nb_programs: number;
+    format_name: string;
+    format_long_name: string;
+    start_time: string;
+    duration: string;
+    size: string;
+    bit_rate: string;
+    probe_score: number;
+    tags: {
+      [name: string]: string;
+    };
   };
 };
 
@@ -101,73 +147,23 @@ export class Ff {
   probe = async (
     file: string,
     throwOnStderr: boolean = false
-  ): Promise<MediaFileProperties> => {
+  ): Promise<ffprobeOutput> => {
     const raw = (
       await this.cfg.runCommandWithStdout(
         this.cfg.ffprobeCommand,
         [
           `-v`,
           `error`,
-          `-show_entries`,
-          `stream=codec_type,codec_name,width,height,r_frame_rate,bit_rate,channels,sample_rate:format=duration,size,format_name:format_tags`,
-          // TODO We originally used ignore_chapters to suppress errors with some corrupted videos, but the option will cause an error on codecs that don't have the concept of chapters (e.g. AAC).
+          `-print_format`,
+          `json`,
+          `-show_stream`,
+          `-show_format`,
           file,
         ].map(String),
         throwOnStderr
       )
     ).trim();
-
-    const properties = {} as MediaFileProperties;
-    for (const [, , sectionName, sectionData] of raw.matchAll(
-      /(^|\n)\[([A-Z]+)](.*?)\n\[\/\2]/gs
-    )) {
-      const values: { [key: string]: string } = Object.fromEntries(
-        sectionData
-          .trim()
-          .split(/[\r\n]+/)
-          .map((kv) => splitString(kv, "=", 2))
-      );
-      switch (sectionName) {
-        case "STREAM":
-          switch (values.codec_type) {
-            case "video":
-              properties.video = {
-                codec: values.codec_name,
-                height: Number.parseInt(values.height, 10),
-                width: Number.parseInt(values.width, 10),
-                fps: values.r_frame_rate
-                  .split("/")
-                  .map((p) => Number.parseInt(p, 10))
-                  .reduce((numerator, denominator) => numerator / denominator),
-              };
-              break;
-            case "audio":
-              properties.audio = {
-                codec: values.codec_name,
-                bitRate:
-                  values.bit_rate === "N/A"
-                    ? undefined
-                    : Number.parseInt(values.bit_rate, 10),
-                channels: Number.parseInt(values.channels, 10),
-                sampleRate: Number.parseInt(values.sample_rate, 10),
-              };
-              break;
-          }
-          break;
-        case "FORMAT":
-          properties.duration = Number.parseFloat(values.duration);
-          properties.format = values.format_name;
-          properties.size = Number.parseInt(values.size);
-          properties.metadata = Object.create(null);
-          for (const [prop, val] of Object.entries(values)) {
-            if (prop.startsWith("TAG:")) {
-              properties.metadata[prop.slice(4)] = val;
-            }
-          }
-          break;
-      }
-    }
-    return properties;
+    return JSON.parse(raw);
   };
 
   extractFrame = async ({
