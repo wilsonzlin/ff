@@ -28,7 +28,7 @@ const job = async (command: string, args: string[]): Promise<void> =>
     proc.on("exit", () => resolve());
   });
 
-type ffprobeOutput = {
+export type ffprobeOutput = {
   streams: Array<{
     index: number;
     codec_name: string;
