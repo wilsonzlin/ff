@@ -1,6 +1,7 @@
 import { execFile, spawn } from "child_process";
 import ifDefined from "extlib/js/ifDefined";
 import mapDefined from "extlib/js/mapDefined";
+import nativeOrdering from "extlib/js/nativeOrdering";
 
 const cmd = async (
   command: string,
@@ -231,7 +232,10 @@ export class Ff {
         throwOnStderr
       )
     ).trim();
-    return raw.split(/\s+/);
+    return raw
+      .split(/\s+/)
+      .map((ts) => +ts)
+      .sort(nativeOrdering);
   };
 
   extractFrame = async ({
