@@ -208,6 +208,32 @@ export class Ff {
     return JSON.parse(raw);
   };
 
+  getKeyframeTimestamps = async (
+    file: string,
+    throwOnStderr: boolean = false
+  ) => {
+    const raw = (
+      await this.cfg.runCommandWithStdout(
+        this.cfg.ffprobeCommand,
+        [
+          `-v`,
+          `error`,
+          `-select_streams`,
+          `v`,
+          `-skip_frame`,
+          `nokey`,
+          `-show_entries`,
+          `frame=pkt_pts_time`,
+          `-of`,
+          `default=noprint_wrappers=1:nokey=1`,
+          file,
+        ].map(String),
+        throwOnStderr
+      )
+    ).trim();
+    return raw.split(/\s+/);
+  };
+
   extractFrame = async ({
     fps,
     input,
