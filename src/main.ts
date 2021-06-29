@@ -238,6 +238,9 @@ export class Ff {
         throwOnStderr
       )
     ).trim();
+    if (!raw) {
+      return [];
+    }
     return raw
       .split(/\s+/)
       .map((ts) => +ts)
