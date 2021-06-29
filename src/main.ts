@@ -292,7 +292,6 @@ export class Ff {
 
   convert = async ({
     threads,
-    logLevel = this.cfg.logLevel,
     input,
     metadata,
     video,
@@ -300,12 +299,18 @@ export class Ff {
     output,
   }: {
     threads?: number;
-    logLevel?: FfmpegLogLevel;
     input: {
       file: string;
       start?: number;
-      duration?: number;
-    };
+      copyTimestamps?: boolean;
+    } & (
+      | {
+          duration?: number;
+        }
+      | {
+          end?: number;
+        }
+    );
     metadata: boolean;
     video:
       | boolean
@@ -393,8 +398,14 @@ export class Ff {
     ifDefined(threads, (t) => args.push(`-threads`, t));
 
     // Input.
+    ifDefined(input.copyTimestamps, (ss) => args.push(`-copyts`));
     ifDefined(input.start, (ss) => args.push(`-ss`, ss.toFixed(3)));
-    ifDefined(input.duration, (t) => args.push(`-t`, t.toFixed(3)));
+    if ("duration" in input) {
+      ifDefined(input.duration, (t) => args.push(`-t`, t.toFixed(3)));
+    }
+    if ("end" in input) {
+      ifDefined(input.end, (t) => args.push(`-t`, t.toFixed(3)));
+    }
     args.push(`-i`, input.file);
 
     // Metadata.
