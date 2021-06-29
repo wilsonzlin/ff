@@ -249,10 +249,8 @@ export class Ff {
     quality?: number;
     scaleWidth?: number;
     timestamp?: number;
-  }): Promise<void> =>
+  }) =>
     this.ffmpeg(
-      `-loglevel`,
-      this.cfg.logLevel,
       ...(mapDefined(timestamp, (timestamp) => [`-ss`, timestamp.toFixed(3)]) ??
         []),
       `-i`,
@@ -266,6 +264,25 @@ export class Ff {
         `fps=${Array.isArray(fps) ? fps.join("/") : fps}`,
       ]) ?? [`-frames:v`, 1]),
       ...(mapDefined(quality, (quality) => [`-q:v`, quality]) ?? []),
+      output
+    );
+
+  concat = async ({
+    filesListFile,
+    output,
+  }: {
+    filesListFile: string;
+    output: string;
+  }) =>
+    this.ffmpeg(
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      filesListFile,
+      "-c",
+      "copy",
       output
     );
 
@@ -366,9 +383,8 @@ export class Ff {
       start?: number;
       duration?: number;
     };
-  }): Promise<void> => {
+  }) => {
     const args = new Array<string | number>();
-    args.push(`-loglevel`, logLevel);
 
     ifDefined(threads, (t) => args.push(`-threads`, t));
 
@@ -447,8 +463,15 @@ export class Ff {
     await this.ffmpeg(...args);
   };
 
-  private async ffmpeg(...args: (string | number)[]): Promise<void> {
-    const fullArgs = [`-hide_banner`, `-nostdin`, `-y`, ...args.map(String)];
+  private async ffmpeg(...args: (string | number)[]) {
+    const fullArgs = [
+      `-hide_banner`,
+      `-nostdin`,
+      `-y`,
+      `-loglevel`,
+      this.cfg.logLevel,
+      ...args.map(String),
+    ];
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
     }
