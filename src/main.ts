@@ -21,12 +21,18 @@ const cmd = async (
   );
 
 const job = async (command: string, args: string[]): Promise<void> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
     const proc = spawn(command, args.map(String), {
       stdio: ["ignore", "inherit", "inherit"],
     });
     proc.on("error", console.error);
-    proc.on("exit", () => resolve());
+    proc.on("exit", (code, signal) => {
+      if (code || signal) {
+        reject(`${command} failed with code ${code} and signal ${signal}`);
+      } else {
+        resolve();
+      }
+    });
   });
 
 export type ffprobeAudioStream = {
@@ -63,7 +69,7 @@ export type ffprobeAudioStream = {
     attached_pic: number;
     timed_thumbnails: number;
   };
-  tags: {
+  tags?: {
     [name: string]: string;
   };
 };
@@ -113,7 +119,7 @@ export type ffprobeVideoStream = {
     attached_pic: number;
     timed_thumbnails: number;
   };
-  tags: {
+  tags?: {
     [name: string]: string;
   };
 };
@@ -129,7 +135,7 @@ export type ffprobeFormat = {
   size: string;
   bit_rate: string;
   probe_score: number;
-  tags: {
+  tags?: {
     [name: string]: string;
   };
 };
