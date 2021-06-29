@@ -448,7 +448,7 @@ export class Ff {
   };
 
   private async ffmpeg(...args: (string | number)[]): Promise<void> {
-    const fullArgs = [`-hide_banner`, `-y`, ...args.map(String)];
+    const fullArgs = [`-hide_banner`, `-nostdin`, `-y`, ...args.map(String)];
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
     }
