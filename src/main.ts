@@ -376,6 +376,7 @@ export class Ff {
                   codec: "vp9";
                   deadline?: "realtime" | "good" | "best";
                   cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
+                  multithreading?: boolean;
                 } & (
                   | {
                       // Average Bitrate mode.
@@ -519,6 +520,10 @@ export class Ff {
           case "vp9":
             ifDefined(video.cpuUsed, (c) => args.push("-cpu-used", c));
             ifDefined(video.deadline, (d) => args.push("-deadline", d));
+            ifDefined(
+              video.multithreading,
+              (t) => t && args.push("-row-mt", 1)
+            );
             switch (video.mode) {
               case "average-bitrate":
                 args.push("-b:v", video.bitrate);
