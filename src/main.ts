@@ -471,7 +471,7 @@ export class Ff {
       file: string;
       start?: number;
       duration?: number;
-      movflags: (
+      movflags?: (
         | "default_base_moof"
         | "disable_chpl"
         | "empty_moov"
