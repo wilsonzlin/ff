@@ -543,8 +543,12 @@ export class Ff {
             }
             break;
           case "vp9":
-            ifDefined(video.cpuUsed, (c) => args.push("-cpu-used", c));
-            ifDefined(video.deadline, (d) => args.push("-deadline", d));
+            if ("cpuUsed" in video) {
+              ifDefined(video.cpuUsed, (c) => args.push("-cpu-used", c));
+            }
+            if ("deadline" in video) {
+              ifDefined(video.deadline, (d) => args.push("-deadline", d));
+            }
             ifDefined(
               video.multithreading,
               (t) => t && args.push("-row-mt", 1)
