@@ -258,7 +258,7 @@ export class Ff {
   }: {
     fps?: number | [number, number];
     input: string;
-    output: string;
+    output: string | { path: string; format: string };
     quality?: number;
     scaleWidth?: number;
     timestamp?: number;
@@ -277,7 +277,9 @@ export class Ff {
         `fps=${Array.isArray(fps) ? fps.join("/") : fps}`,
       ]) ?? [`-frames:v`, 1]),
       ...(mapDefined(quality, (quality) => [`-q:v`, quality]) ?? []),
-      output
+      ...(typeof output == "string"
+        ? [output]
+        : ["-f", output.format, output.path])
     );
 
   concat = async ({
