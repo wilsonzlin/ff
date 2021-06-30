@@ -1,40 +1,21 @@
-import { execFile, spawn } from "child_process";
+import exec from "extlib/js/exec";
 import ifDefined from "extlib/js/ifDefined";
 import mapDefined from "extlib/js/mapDefined";
 import nativeOrdering from "extlib/js/nativeOrdering";
 import UnreachableError from "extlib/js/UnreachableError";
 
-const cmd = async (
+const cmd = (
   command: string,
   args: string[],
   throwOnStderr: boolean
 ): Promise<string> =>
-  new Promise((resolve, reject) =>
-    execFile(command, args, (error, stdout, stderr) => {
-      if (error) {
-        reject(error);
-      } else if (stderr && throwOnStderr) {
-        reject(new Error(`stderr: ${stderr}`));
-      } else {
-        resolve(stdout);
-      }
-    })
-  );
+  exec(command, ...args)
+    .killOnStderr(throwOnStderr)
+    .text()
+    .output();
 
-const job = async (command: string, args: string[]): Promise<void> =>
-  new Promise((resolve, reject) => {
-    const proc = spawn(command, args.map(String), {
-      stdio: ["ignore", "inherit", "inherit"],
-    });
-    proc.on("error", console.error);
-    proc.on("exit", (code, signal) => {
-      if (code || signal) {
-        reject(`${command} failed with code ${code} and signal ${signal}`);
-      } else {
-        resolve();
-      }
-    });
-  });
+const job = (command: string, args: string[]): Promise<unknown> =>
+  exec(command, ...args).status();
 
 export type ffprobeAudioStream = {
   index: number;
@@ -163,7 +144,10 @@ export type FfConfig = {
   ffmpegCommand: string;
   logLevel: FfmpegLogLevel;
   logCommandBeforeRunning: boolean;
-  runCommandWithoutStdout: (command: string, args: string[]) => Promise<void>;
+  runCommandWithoutStdout: (
+    command: string,
+    args: string[]
+  ) => Promise<unknown>;
   runCommandWithStdout: (
     command: string,
     args: string[],
