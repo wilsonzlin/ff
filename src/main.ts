@@ -326,7 +326,7 @@ export class Ff {
         }
     );
     metadata: boolean;
-    video:
+    video?:
       | boolean
       | ({
           filter?: string;
@@ -430,7 +430,7 @@ export class Ff {
                 }
             ))
         ));
-    audio:
+    audio?:
       | boolean
       | ({
           samplingRate?: number;
@@ -507,7 +507,7 @@ export class Ff {
     // Video.
     if (typeof video == "boolean") {
       video ? args.push(`-c:v`, `copy`) : args.push(`-vn`);
-    } else {
+    } else if (video !== undefined) {
       if (video.codec == "copy") {
         ifDefined(video.filter, (filter) => args.push("-filter:v", filter));
         args.push(`-c:v`, `copy`);
@@ -586,7 +586,7 @@ export class Ff {
     // Audio.
     if (typeof audio == "boolean") {
       audio ? args.push(`-c:a`, `copy`) : args.push(`-an`);
-    } else {
+    } else if (audio !== undefined) {
       ifDefined(audio.filter, (f) => args.push(`-af`, f));
       args.push(
         `-c:a`,
