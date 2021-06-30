@@ -1,6 +1,6 @@
 {
   "name": "@wzlin/ff",
-  "version": "0.12.5",
+  "version": "0.13.1",
   "description": "Wrappers around ffmpeg and ffprobe commands",
   "main": "dist/main.js",
   "files": [
