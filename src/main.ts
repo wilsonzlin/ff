@@ -374,43 +374,68 @@ export class Ff {
                 }
               | ({
                   codec: "vp9";
-                  deadline?: "realtime" | "good" | "best";
-                  cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
                   multithreading?: boolean;
                 } & (
+                  | {}
                   | {
-                      // Average Bitrate mode.
-                      mode: "average-bitrate";
-                      bitrate: number;
+                      deadline: "good" | "best";
+                      cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
                     }
                   | {
-                      // Constant Quality mode.
-                      mode: "constant-quality";
-                      crf: number;
+                      deadline: "realtime";
+                      cpuUsed?:
+                        | 0
+                        | 1
+                        | 2
+                        | 3
+                        | 4
+                        | 5
+                        | 6
+                        | 7
+                        | 8
+                        | 9
+                        | 10
+                        | 11
+                        | 12
+                        | 13
+                        | 14
+                        | 15;
                     }
-                  | {
-                      // Constrained Quality mode with CRF.
-                      mode: "constrained-quality";
-                      crf: number;
-                      bitrate: string;
-                    }
-                  | {
-                      // Constrained Quality mode with bounded bitrate.
-                      mode: "constrained-quality";
-                      minBitrate: string;
-                      targetBitrate: string;
-                      maxBitrate: string;
-                    }
-                  | {
-                      // Constant Bitrate mode.
-                      mode: "constant-bitrate";
-                      bitrate: string;
-                    }
-                  | {
-                      // Lossless mode;
-                      mode: "lossless";
-                    }
-                ))
+                ) &
+                  (
+                    | {
+                        // Average Bitrate mode.
+                        mode: "average-bitrate";
+                        bitrate: number;
+                      }
+                    | {
+                        // Constant Quality mode.
+                        mode: "constant-quality";
+                        crf: number;
+                      }
+                    | {
+                        // Constrained Quality mode with CRF.
+                        mode: "constrained-quality";
+                        crf: number;
+                        bitrate: string;
+                      }
+                    | {
+                        // Constrained Quality mode with bounded bitrate.
+                        mode: "constrained-quality";
+                        minBitrate: string;
+                        targetBitrate: string;
+                        maxBitrate: string;
+                      }
+                    | {
+                        // Constant Bitrate mode.
+                        mode: "constant-bitrate";
+                        bitrate: string;
+                      }
+                    | {
+                        // Lossless mode;
+                        mode: "lossless";
+                      }
+                  ))
               | {
                   codec: "gif";
                   loop: boolean | number;
