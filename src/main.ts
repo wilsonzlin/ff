@@ -151,7 +151,7 @@ export type FfConfig = {
   runCommandWithStdout: (
     command: string,
     args: string[],
-    throwOnStdout: boolean
+    throwOnStderr: boolean
   ) => Promise<string>;
 };
 
