@@ -358,19 +358,6 @@ export class Ff {
                     | "slower"
                     | "veryslow";
                   crf: number;
-                  movflags: (
-                    | "default_base_moof"
-                    | "disable_chpl"
-                    | "empty_moov"
-                    | "faststart"
-                    | "frag_every_frame"
-                    | "frag_keyframe"
-                    | "negative_cts_offsets"
-                    | "omit_tfhd_offset"
-                    | "rtphint"
-                    | "separate_moof"
-                    | "skip_sidx"
-                  )[];
                 }
               | ({
                   codec: "vp9";
@@ -484,6 +471,19 @@ export class Ff {
       file: string;
       start?: number;
       duration?: number;
+      movflags: (
+        | "default_base_moof"
+        | "disable_chpl"
+        | "empty_moov"
+        | "faststart"
+        | "frag_every_frame"
+        | "frag_keyframe"
+        | "negative_cts_offsets"
+        | "omit_tfhd_offset"
+        | "rtphint"
+        | "separate_moof"
+        | "skip_sidx"
+      )[];
     };
   }) => {
     const args = new Array<string | number>();
@@ -531,9 +531,6 @@ export class Ff {
           case "libx264":
             args.push(`-preset`, video.preset);
             args.push(`-crf`, video.crf);
-            if (video.movflags.length) {
-              args.push(`-movflags`, video.movflags.join("+"));
-            }
             args.push(`-max_muxing_queue_size`, 1048576);
             break;
           case "gif":
@@ -605,6 +602,9 @@ export class Ff {
     }
 
     // Output.
+    if (output.movflags.length) {
+      args.push(`-movflags`, output.movflags.join("+"));
+    }
     ifDefined(output.format, (format) => args.push(`-f`, format));
     ifDefined(output.start, (ss) => args.push(`-ss`, ss.toFixed(3)));
     ifDefined(output.duration, (t) => args.push(`-t`, t.toFixed(3)));
