@@ -374,7 +374,7 @@ export class Ff {
                 }
               | ({
                   codec: "vp9";
-                  deadline: "realtime" | "good" | "best";
+                  deadline?: "realtime" | "good" | "best";
                   cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
                 } & (
                   | {
