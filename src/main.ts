@@ -2,6 +2,7 @@ import { execFile, spawn } from "child_process";
 import ifDefined from "extlib/js/ifDefined";
 import mapDefined from "extlib/js/mapDefined";
 import nativeOrdering from "extlib/js/nativeOrdering";
+import UnreachableError from "extlib/js/UnreachableError";
 
 const cmd = async (
   command: string,
@@ -341,6 +342,10 @@ export class Ff {
               };
             } & (
               | {
+                  codec: "libtheora";
+                  quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+                }
+              | {
                   codec: "libx264";
                   preset:
                     | "ultrafast"
@@ -355,12 +360,56 @@ export class Ff {
                   crf: number;
                   movflags: (
                     | "default_base_moof"
+                    | "disable_chpl"
                     | "empty_moov"
                     | "faststart"
                     | "frag_every_frame"
                     | "frag_keyframe"
+                    | "negative_cts_offsets"
+                    | "omit_tfhd_offset"
+                    | "rtphint"
+                    | "separate_moof"
+                    | "skip_sidx"
                   )[];
                 }
+              | ({
+                  codec: "vp9";
+                  deadline: "realtime" | "good" | "best";
+                  cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
+                } & (
+                  | {
+                      // Average Bitrate mode.
+                      mode: "average-bitrate";
+                      bitrate: number;
+                    }
+                  | {
+                      // Constant Quality mode.
+                      mode: "constant-quality";
+                      crf: number;
+                    }
+                  | {
+                      // Constrained Quality mode with CRF.
+                      mode: "constrained-quality";
+                      crf: number;
+                      bitrate: string;
+                    }
+                  | {
+                      // Constrained Quality mode with bounded bitrate.
+                      mode: "constrained-quality";
+                      minBitrate: string;
+                      targetBitrate: string;
+                      maxBitrate: string;
+                    }
+                  | {
+                      // Constant Bitrate mode.
+                      mode: "constant-bitrate";
+                      bitrate: string;
+                    }
+                  | {
+                      // Lossless mode;
+                      mode: "lossless";
+                    }
+                ))
               | {
                   codec: "gif";
                   loop: boolean | number;
@@ -386,7 +435,11 @@ export class Ff {
               quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
             }
           | {
+              codec: "libopus";
+            }
+          | {
               codec: "libvorbis";
+              quality: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
             }
           | {
               codec: "pcm";
@@ -445,6 +498,9 @@ export class Ff {
 
         args.push(`-c:v`, video.codec);
         switch (video.codec) {
+          case "libtheora":
+            args.push("-q:v", video.quality);
+            break;
           case "libx264":
             args.push(`-preset`, video.preset);
             args.push(`-crf`, video.crf);
@@ -458,6 +514,37 @@ export class Ff {
               args.push(`-loop`, video.loop ? 0 : -1);
             } else {
               args.push(`-loop`, video.loop);
+            }
+            break;
+          case "vp9":
+            ifDefined(video.cpuUsed, (c) => args.push("-cpu-used", c));
+            ifDefined(video.deadline, (d) => args.push("-deadline", d));
+            switch (video.mode) {
+              case "average-bitrate":
+                args.push("-b:v", video.bitrate);
+                break;
+              case "constant-bitrate":
+                for (const a of ["-minrate", "-b:v", "-maxrate"]) {
+                  args.push(a, video.bitrate);
+                }
+                break;
+              case "constant-quality":
+                args.push("-crf", video.crf, "-b:v", 0);
+                break;
+              case "constrained-quality":
+                if ("crf" in video) {
+                  args.push("-crf", video.crf, "-b:v", video.bitrate);
+                } else {
+                  args.push("-minrate", video.minBitrate);
+                  args.push("-b:v", video.targetBitrate);
+                  args.push("-maxrate", video.maxBitrate);
+                }
+                break;
+              case "lossless":
+                args.push("-lossless", 1);
+                break;
+              default:
+                throw new UnreachableError(video);
             }
             break;
         }
@@ -477,7 +564,7 @@ export class Ff {
       );
       audio.downmix && args.push(`-ac`, 1);
       audio.samplingRate && args.push(`-ar`, audio.samplingRate);
-      if (audio.codec == "libmp3lame") {
+      if (audio.codec == "libmp3lame" || audio.codec == "libvorbis") {
         args.push(`-q:a`, audio.quality);
       }
     }
