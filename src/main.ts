@@ -287,7 +287,7 @@ export class Ff {
     output,
   }: {
     filesListFile: string;
-    output: string;
+    output: string | { path: string; format: string };
   }) =>
     this.ffmpeg(
       "-f",
@@ -298,7 +298,9 @@ export class Ff {
       filesListFile,
       "-c",
       "copy",
-      output
+      ...(typeof output == "string"
+        ? [output]
+        : ["-f", output.format, output.path])
     );
 
   convert = async ({
