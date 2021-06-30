@@ -602,7 +602,7 @@ export class Ff {
     }
 
     // Output.
-    if (output.movflags.length) {
+    if (output.movflags?.length) {
       args.push(`-movflags`, output.movflags.join("+"));
     }
     ifDefined(output.format, (format) => args.push(`-f`, format));
