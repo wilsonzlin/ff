@@ -176,42 +176,28 @@ export class Ff {
   }
 
   probe = async (file: string): Promise<ffprobeOutput> => {
-    const raw = (
-      await this.cfg.runCommandWithStdout(
-        this.cfg.ffprobeCommand,
-        [
-          `-v`,
-          `error`,
-          `-print_format`,
-          `json`,
-          `-show_streams`,
-          `-show_format`,
-          file,
-        ].map(String)
-      )
-    ).trim();
+    const raw = await this.ffprobe(
+      `-print_format`,
+      `json`,
+      `-show_streams`,
+      `-show_format`,
+      file
+    );
     return JSON.parse(raw);
   };
 
   getKeyframeTimestamps = async (file: string) => {
-    const raw = (
-      await this.cfg.runCommandWithStdout(
-        this.cfg.ffprobeCommand,
-        [
-          `-v`,
-          `error`,
-          `-select_streams`,
-          `v`,
-          `-skip_frame`,
-          `nokey`,
-          `-show_entries`,
-          `frame=pkt_pts_time`,
-          `-of`,
-          `default=noprint_wrappers=1:nokey=1`,
-          file,
-        ].map(String)
-      )
-    ).trim();
+    const raw = await this.ffprobe(
+      `-select_streams`,
+      `v`,
+      `-skip_frame`,
+      `nokey`,
+      `-show_entries`,
+      `frame=pkt_pts_time`,
+      `-of`,
+      `default=noprint_wrappers=1:nokey=1`,
+      file
+    );
     if (!raw) {
       return [];
     }
@@ -599,5 +585,15 @@ export class Ff {
       console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
     }
     await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, fullArgs);
+  }
+
+  private async ffprobe(...args: (string | number)[]) {
+    const fullArgs = [`-v`, `error`, ...args.map(String)];
+    if (this.cfg.logCommandBeforeRunning) {
+      console.debug("+", this.cfg.ffprobeCommand, ...fullArgs);
+    }
+    return await this.cfg
+      .runCommandWithStdout(this.cfg.ffprobeCommand, fullArgs)
+      .then((r) => r.trim());
   }
 }
