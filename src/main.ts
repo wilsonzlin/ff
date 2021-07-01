@@ -4,18 +4,19 @@ import mapDefined from "extlib/js/mapDefined";
 import nativeOrdering from "extlib/js/nativeOrdering";
 import UnreachableError from "extlib/js/UnreachableError";
 
-const cmd = (
-  command: string,
-  args: string[],
-  throwOnStderr: boolean
-): Promise<string> =>
+// ffmpeg and ffprobe often emit stderr messages and exit with non-zero codes
+// but still output (mostly) usable/correct data, so don't throw on stderr or bad status.
+// Instead, users of this library should check the output contents for validation.
+const cmd = (command: string, args: string[]): Promise<string> =>
   exec(command, ...args)
-    .killOnStderr(throwOnStderr)
+    .throwOnBadStatus(false)
     .text()
     .output();
 
 const job = (command: string, args: string[]): Promise<unknown> =>
-  exec(command, ...args).status();
+  exec(command, ...args)
+    .throwOnBadStatus(false)
+    .status();
 
 export type ffprobeAudioStream = {
   index: number;
@@ -148,11 +149,7 @@ export type FfConfig = {
     command: string,
     args: string[]
   ) => Promise<unknown>;
-  runCommandWithStdout: (
-    command: string,
-    args: string[],
-    throwOnStderr: boolean
-  ) => Promise<string>;
+  runCommandWithStdout: (command: string, args: string[]) => Promise<string>;
 };
 
 const createCfg = ({
@@ -178,10 +175,7 @@ export class Ff {
     this.cfg = createCfg(cfg);
   }
 
-  probe = async (
-    file: string,
-    throwOnStderr: boolean = false
-  ): Promise<ffprobeOutput> => {
+  probe = async (file: string): Promise<ffprobeOutput> => {
     const raw = (
       await this.cfg.runCommandWithStdout(
         this.cfg.ffprobeCommand,
@@ -193,17 +187,13 @@ export class Ff {
           `-show_streams`,
           `-show_format`,
           file,
-        ].map(String),
-        throwOnStderr
+        ].map(String)
       )
     ).trim();
     return JSON.parse(raw);
   };
 
-  getKeyframeTimestamps = async (
-    file: string,
-    throwOnStderr: boolean = false
-  ) => {
+  getKeyframeTimestamps = async (file: string) => {
     const raw = (
       await this.cfg.runCommandWithStdout(
         this.cfg.ffprobeCommand,
@@ -219,8 +209,7 @@ export class Ff {
           `-of`,
           `default=noprint_wrappers=1:nokey=1`,
           file,
-        ].map(String),
-        throwOnStderr
+        ].map(String)
       )
     ).trim();
     if (!raw) {
