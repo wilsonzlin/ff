@@ -175,16 +175,16 @@ export class Ff {
     this.cfg = createCfg(cfg);
   }
 
-  probe = async (file: string): Promise<ffprobeOutput> => {
-    const raw = await this.ffprobe(
-      `-print_format`,
-      `json`,
-      `-show_streams`,
-      `-show_format`,
-      file
+  probe = async (file: string): Promise<ffprobeOutput> =>
+    JSON.parse(
+      await this.ffprobe(
+        `-print_format`,
+        `json`,
+        `-show_streams`,
+        `-show_format`,
+        file
+      )
     );
-    return JSON.parse(raw);
-  };
 
   getKeyframeTimestamps = async (file: string) => {
     const raw = await this.ffprobe(
@@ -592,8 +592,10 @@ export class Ff {
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffprobeCommand, ...fullArgs);
     }
-    return await this.cfg
-      .runCommandWithStdout(this.cfg.ffprobeCommand, fullArgs)
-      .then((r) => r.trim());
+    const raw = await this.cfg.runCommandWithStdout(
+      this.cfg.ffprobeCommand,
+      fullArgs
+    );
+    return raw.trim();
   }
 }
