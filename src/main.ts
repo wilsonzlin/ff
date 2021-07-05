@@ -86,7 +86,7 @@ export type ffprobeVideoStream = {
   start_time: string;
   duration_ts: number;
   duration: string;
-  bit_rate: string;
+  bit_rate?: string;
   bits_per_raw_sample: string;
   disposition: {
     default: number;
