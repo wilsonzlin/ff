@@ -128,6 +128,13 @@ export type ffprobeOutput = {
   format: ffprobeFormat;
 };
 
+export const isFfprobeAudioStream = (
+  val: ffprobeAudioStream | ffprobeVideoStream
+): val is ffprobeAudioStream => val.codec_type == "audio";
+export const isFfprobeVideoStream = (
+  val: ffprobeAudioStream | ffprobeVideoStream
+): val is ffprobeVideoStream => val.codec_type == "video";
+
 export enum FfmpegLogLevel {
   QUIET = "quiet",
   PANIC = "panic",
