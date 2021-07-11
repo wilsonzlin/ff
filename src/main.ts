@@ -464,7 +464,7 @@ export class Ff {
       ifDefined(input.duration, (t) => args.push(`-t`, t.toFixed(3)));
     }
     if ("end" in input) {
-      ifDefined(input.end, (t) => args.push(`-t`, t.toFixed(3)));
+      ifDefined(input.end, (t) => args.push(`-to`, t.toFixed(3)));
     }
     args.push(`-i`, input.file);
 
