@@ -302,6 +302,7 @@ export class Ff {
             }
           | ({
               fps?: number;
+              vsync?: "passthrough" | "cfr" | "vfr" | "drop" | "auto";
               resize?: {
                 height?: number;
                 width?: number;
@@ -488,6 +489,7 @@ export class Ff {
         if (filters.length) {
           args.push(`-filter:v`, filters.join(","));
         }
+        ifDefined(video.vsync, (vsync) => args.push(`-vsync ${vsync}`));
 
         args.push(`-c:v`, video.codec);
         switch (video.codec) {
