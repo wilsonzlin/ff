@@ -1,8 +1,8 @@
-import exec from "extlib/js/exec";
-import ifDefined from "extlib/js/ifDefined";
-import mapDefined from "extlib/js/mapDefined";
-import nativeOrdering from "extlib/js/nativeOrdering";
-import UnreachableError from "extlib/js/UnreachableError";
+import exec from "@xtjs/lib/js/exec";
+import ifDefined from "@xtjs/lib/js/ifDefined";
+import mapDefined from "@xtjs/lib/js/mapDefined";
+import nativeOrdering from "@xtjs/lib/js/nativeOrdering";
+import UnreachableError from "@xtjs/lib/js/UnreachableError";
 
 // ffmpeg and ffprobe often emit stderr messages and exit with non-zero codes
 // but still output (mostly) usable/correct data, so don't throw on stderr or bad status.
