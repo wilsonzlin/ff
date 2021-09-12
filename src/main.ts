@@ -1,3 +1,4 @@
+import defined from "@xtjs/lib/js/defined";
 import exec from "@xtjs/lib/js/exec";
 import ifDefined from "@xtjs/lib/js/ifDefined";
 import mapDefined from "@xtjs/lib/js/mapDefined";
@@ -7,11 +8,15 @@ import UnreachableError from "@xtjs/lib/js/UnreachableError";
 // ffmpeg and ffprobe often emit stderr messages and exit with non-zero codes
 // but still output (mostly) usable/correct data, so don't throw on stderr or bad status.
 // Instead, users of this library should check the output contents for validation.
-const cmd = (command: string, args: string[]): Promise<string> =>
+const cmd = (
+  command: string,
+  args: string[],
+  stream: "stdout" | "stderr"
+): Promise<string> =>
   exec(command, ...args)
     .throwOnBadStatus(false)
     .text()
-    .output();
+    .output(stream == "stderr", stream == "stdout");
 
 const job = (command: string, args: string[]): Promise<unknown> =>
   exec(command, ...args)
@@ -152,11 +157,15 @@ export type FfConfig = {
   ffmpegCommand: string;
   logLevel: FfmpegLogLevel;
   logCommandBeforeRunning: boolean;
-  runCommandWithoutStdout: (
+  runCommandWithoutOutput: (
     command: string,
     args: string[]
   ) => Promise<unknown>;
-  runCommandWithStdout: (command: string, args: string[]) => Promise<string>;
+  runCommandWithOutput: (
+    command: string,
+    args: string[],
+    stream: "stdout" | "stderr"
+  ) => Promise<string>;
 };
 
 const createCfg = ({
@@ -164,15 +173,15 @@ const createCfg = ({
   ffprobeCommand = "ffprobe",
   logLevel = FfmpegLogLevel.ERROR,
   logCommandBeforeRunning = false,
-  runCommandWithoutStdout = job,
-  runCommandWithStdout = cmd,
+  runCommandWithoutOutput = job,
+  runCommandWithOutput = cmd,
 }: Partial<FfConfig>): FfConfig => ({
   ffmpegCommand,
   ffprobeCommand,
   logLevel,
   logCommandBeforeRunning,
-  runCommandWithoutStdout,
-  runCommandWithStdout,
+  runCommandWithoutOutput,
+  runCommandWithOutput,
 });
 
 export class Ff {
@@ -215,7 +224,7 @@ export class Ff {
   };
 
   extractFrame = async ({
-    fps,
+    logLevel,
     input,
     output,
     scaleWidth,
@@ -223,7 +232,7 @@ export class Ff {
     // Do not use a default value, as not all formats use this.
     quality,
   }: {
-    fps?: number | [number, number];
+    logLevel?: FfmpegLogLevel;
     input: string;
     output: string | { path: string; format: string };
     quality?: number;
@@ -231,6 +240,7 @@ export class Ff {
     timestamp?: number;
   }) =>
     this.ffmpeg(
+      logLevel,
       ...(mapDefined(timestamp, (timestamp) => [`-ss`, timestamp.toFixed(3)]) ??
         []),
       `-i`,
@@ -239,24 +249,93 @@ export class Ff {
         `-filter:v`,
         `scale=${scaleWidth}:-1`,
       ]) ?? []),
-      ...(mapDefined(fps, (fps) => [
-        "-vf",
-        `fps=${Array.isArray(fps) ? fps.join("/") : fps}`,
-      ]) ?? [`-frames:v`, 1]),
+      `-frames:v`,
+      1,
       ...(mapDefined(quality, (quality) => [`-q:v`, quality]) ?? []),
       ...(typeof output == "string"
         ? [output]
         : ["-f", output.format, output.path])
     );
 
+  extractFrames = async ({
+    fps,
+    input,
+    output,
+    scaleWidth,
+    startTime,
+    // Do not use a default value, as not all formats use this.
+    quality,
+  }: {
+    // This will duplicate frames if source FPS is lower. To use an upper bound instead, calculate the FPS of the input beforehand, and use Math.min.
+    fps?: number | [number, number];
+    input: string;
+    output: string | { path: string; format: string };
+    quality?: number;
+    scaleWidth?: number;
+    startTime?: number;
+  }) => {
+    const args = [
+      `-hide_banner`,
+      `-nostdin`,
+      `-y`,
+      `-loglevel`,
+      // INFO is required to show output of showinfo filter.
+      FfmpegLogLevel.INFO,
+      ...(mapDefined(startTime, (timestamp) => [`-ss`, timestamp.toFixed(3)]) ??
+        []),
+      `-i`,
+      input,
+      `-filter:v`,
+      // Place FPS filter before other filters so that others don't have to run on dropped frames.
+      [
+        mapDefined(fps, (fps) => [
+          `fps=${Array.isArray(fps) ? fps.join("/") : fps}`,
+        ]),
+        mapDefined(scaleWidth, (scaleWidth) => [`scale=${scaleWidth}:-1`]),
+        "showinfo",
+      ]
+        .filter(defined)
+        .join(","),
+      ...(mapDefined(quality, (quality) => [`-q:v`, quality]) ?? []),
+      ...(typeof output == "string"
+        ? [output]
+        : ["-f", output.format, output.path]),
+    ].map(String);
+    if (this.cfg.logCommandBeforeRunning) {
+      console.debug("+", this.cfg.ffmpegCommand, ...args);
+    }
+    const out = await this.cfg.runCommandWithOutput(
+      this.cfg.ffmpegCommand,
+      args,
+      "stderr"
+    );
+    const frames = [];
+    for (const line of out.split(/[\r\n]+/)) {
+      if (!line.startsWith("[Parsed_showinfo_")) {
+        continue;
+      }
+      const m = /\spts_time:\s*([0-9]+(?:\.[0-9]+)?)/.exec(line);
+      if (!m) {
+        continue;
+      }
+      frames.push({ timestamp: +m[1] });
+    }
+    return {
+      frames,
+    };
+  };
+
   concat = async ({
+    logLevel,
     filesListFile,
     output,
   }: {
+    logLevel?: FfmpegLogLevel;
     filesListFile: string;
     output: string | { path: string; format: string };
   }) =>
     this.ffmpeg(
+      logLevel,
       "-f",
       "concat",
       "-safe",
@@ -271,6 +350,7 @@ export class Ff {
     );
 
   convert = async ({
+    logLevel,
     threads,
     input,
     metadata,
@@ -278,6 +358,7 @@ export class Ff {
     audio,
     output,
   }: {
+    logLevel?: FfmpegLogLevel;
     threads?: number;
     input: {
       file: string;
@@ -578,22 +659,25 @@ export class Ff {
     ifDefined(output.duration, (t) => args.push(`-t`, t.toFixed(3)));
     args.push(output.file);
 
-    await this.ffmpeg(...args);
+    await this.ffmpeg(logLevel, ...args);
   };
 
-  private async ffmpeg(...args: (string | number)[]) {
+  private async ffmpeg(
+    logLevel: FfmpegLogLevel = this.cfg.logLevel,
+    ...args: (string | number)[]
+  ) {
     const fullArgs = [
       `-hide_banner`,
       `-nostdin`,
       `-y`,
       `-loglevel`,
-      this.cfg.logLevel,
+      logLevel,
       ...args.map(String),
     ];
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
     }
-    await this.cfg.runCommandWithoutStdout(this.cfg.ffmpegCommand, fullArgs);
+    await this.cfg.runCommandWithoutOutput(this.cfg.ffmpegCommand, fullArgs);
   }
 
   private async ffprobe(...args: (string | number)[]) {
@@ -601,9 +685,10 @@ export class Ff {
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffprobeCommand, ...fullArgs);
     }
-    const raw = await this.cfg.runCommandWithStdout(
+    const raw = await this.cfg.runCommandWithOutput(
       this.cfg.ffprobeCommand,
-      fullArgs
+      fullArgs,
+      "stdout"
     );
     return raw.trim();
   }
