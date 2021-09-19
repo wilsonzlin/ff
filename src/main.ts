@@ -129,8 +129,9 @@ export type ffprobeFormat = {
 };
 
 export type ffprobeOutput = {
-  streams: Array<ffprobeAudioStream | ffprobeVideoStream>;
-  format: ffprobeFormat;
+  // ffprobe outputs an empty object for invalid formats.
+  streams?: Array<ffprobeAudioStream | ffprobeVideoStream>;
+  format?: ffprobeFormat;
 };
 
 export const isFfprobeAudioStream = (
