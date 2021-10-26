@@ -259,6 +259,7 @@ export class Ff {
     );
 
   extractFrames = async ({
+    threads,
     fps,
     input,
     output,
@@ -267,6 +268,7 @@ export class Ff {
     // Do not use a default value, as not all formats use this.
     quality,
   }: {
+    threads?: number;
     // This will duplicate frames if source FPS is lower. To use an upper bound instead, calculate the FPS of the input beforehand, and use Math.min.
     fps?: number | [number, number];
     input: string;
@@ -279,6 +281,7 @@ export class Ff {
       `-hide_banner`,
       `-nostdin`,
       `-y`,
+      ...(mapDefined(threads, (t) => [`-threads`, t]) ?? []),
       `-loglevel`,
       // INFO is required to show output of showinfo filter.
       FfmpegLogLevel.INFO,
