@@ -185,6 +185,191 @@ const createCfg = ({
   runCommandWithOutput,
 });
 
+type ExtractFrameOpts = {
+  input: string;
+  output: string | { path: string; format: string };
+  quality?: number;
+  scaleWidth?: number;
+  timestamp?: number;
+};
+
+type ConvertOpts = {
+  threads?: number;
+  input: {
+    file: string;
+    start?: number;
+    copyTimestamps?: boolean;
+  } & (
+    | {
+        duration?: number;
+      }
+    | {
+        end?: number;
+      }
+  );
+  metadata: boolean;
+  video?:
+    | boolean
+    | ({
+        filter?: string;
+      } & (
+        | {
+            codec: "copy";
+          }
+        | ({
+            fps?: number;
+            vsync?: "passthrough" | "cfr" | "vfr" | "drop" | "auto";
+            resize?: {
+              height?: number;
+              width?: number;
+            };
+          } & (
+            | {
+                codec: "libtheora";
+                quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+              }
+            | {
+                codec: "libx264";
+                preset:
+                  | "ultrafast"
+                  | "superfast"
+                  | "veryfast"
+                  | "faster"
+                  | "fast"
+                  | "medium"
+                  | "slow"
+                  | "slower"
+                  | "veryslow";
+                crf: number;
+              }
+            | ({
+                codec: "vp9";
+                multithreading?: boolean;
+              } & (
+                | {}
+                | {
+                    deadline: "good" | "best";
+                    cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
+                  }
+                | {
+                    deadline: "realtime";
+                    cpuUsed?:
+                      | -8
+                      | -7
+                      | -6
+                      | -5
+                      | -4
+                      | -3
+                      | -2
+                      | -1
+                      | 0
+                      | 1
+                      | 2
+                      | 3
+                      | 4
+                      | 5
+                      | 6
+                      | 7
+                      | 8;
+                  }
+              ) &
+                (
+                  | {
+                      // Average Bitrate mode.
+                      mode: "average-bitrate";
+                      bitrate: number;
+                    }
+                  | {
+                      // Constant Quality mode.
+                      mode: "constant-quality";
+                      crf: number;
+                    }
+                  | {
+                      // Constrained Quality mode with CRF.
+                      mode: "constrained-quality";
+                      crf: number;
+                      bitrate: string;
+                    }
+                  | {
+                      // Constrained Quality mode with bounded bitrate.
+                      mode: "constrained-quality";
+                      minBitrate: string;
+                      targetBitrate: string;
+                      maxBitrate: string;
+                    }
+                  | {
+                      // Constant Bitrate mode.
+                      mode: "constant-bitrate";
+                      bitrate: string;
+                    }
+                  | {
+                      // Lossless mode;
+                      mode: "lossless";
+                    }
+                ))
+            | {
+                codec: "gif";
+                loop: boolean | number;
+              }
+          ))
+      ));
+  audio?:
+    | boolean
+    | ({
+        samplingRate?: number;
+        // Mix a single stereo stream into a mono stream.
+        downmix?: boolean;
+        filter?: string;
+      } & (
+        | {
+            codec: "aac";
+          }
+        | {
+            codec: "flac";
+          }
+        | {
+            codec: "libmp3lame";
+            quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+          }
+        | {
+            codec: "libopus";
+          }
+        | {
+            codec: "libvorbis";
+            quality: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
+          }
+        | {
+            codec: "pcm";
+            signedness: "s" | "u";
+            bits: 8 | 16 | 24 | 32 | 64;
+            // Omit if 8 bits.
+            endianness?: "be" | "le";
+          }
+        | {
+            codec: "copy";
+          }
+      ));
+  output: {
+    format?: string;
+    file: string;
+    start?: number;
+    duration?: number;
+    movflags?: (
+      | "default_base_moof"
+      | "disable_chpl"
+      | "empty_moov"
+      | "faststart"
+      | "frag_every_frame"
+      | "frag_keyframe"
+      | "negative_cts_offsets"
+      | "omit_tfhd_offset"
+      | "rtphint"
+      | "separate_moof"
+      | "skip_sidx"
+    )[];
+  };
+};
+
 export class Ff {
   private readonly cfg: FfConfig;
 
@@ -224,24 +409,15 @@ export class Ff {
       .sort(nativeOrdering);
   };
 
-  extractFrame = async ({
-    logLevel,
+  buildExtractFrameArgs = ({
     input,
     output,
     scaleWidth,
     timestamp,
     // Do not use a default value, as not all formats use this.
     quality,
-  }: {
-    logLevel?: FfmpegLogLevel;
-    input: string;
-    output: string | { path: string; format: string };
-    quality?: number;
-    scaleWidth?: number;
-    timestamp?: number;
-  }) =>
-    this.ffmpeg(
-      logLevel,
+  }: ExtractFrameOpts) =>
+    [
       ...(mapDefined(timestamp, (timestamp) => [`-ss`, timestamp.toFixed(3)]) ??
         []),
       `-i`,
@@ -255,8 +431,15 @@ export class Ff {
       ...(mapDefined(quality, (quality) => [`-q:v`, quality]) ?? []),
       ...(typeof output == "string"
         ? [output]
-        : ["-f", output.format, output.path])
-    );
+        : ["-f", output.format, output.path]),
+    ].map(String);
+
+  extractFrame = async ({
+    logLevel,
+    ...opts
+  }: ExtractFrameOpts & {
+    logLevel?: FfmpegLogLevel;
+  }) => this.ffmpeg(logLevel, ...this.buildExtractFrameArgs(opts));
 
   extractFrames = async ({
     threads,
@@ -353,191 +536,14 @@ export class Ff {
         : ["-f", output.format, output.path])
     );
 
-  convert = async ({
-    logLevel,
+  buildConvertArgs = ({
     threads,
     input,
     metadata,
     video,
     audio,
     output,
-  }: {
-    logLevel?: FfmpegLogLevel;
-    threads?: number;
-    input: {
-      file: string;
-      start?: number;
-      copyTimestamps?: boolean;
-    } & (
-      | {
-          duration?: number;
-        }
-      | {
-          end?: number;
-        }
-    );
-    metadata: boolean;
-    video?:
-      | boolean
-      | ({
-          filter?: string;
-        } & (
-          | {
-              codec: "copy";
-            }
-          | ({
-              fps?: number;
-              vsync?: "passthrough" | "cfr" | "vfr" | "drop" | "auto";
-              resize?: {
-                height?: number;
-                width?: number;
-              };
-            } & (
-              | {
-                  codec: "libtheora";
-                  quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-                }
-              | {
-                  codec: "libx264";
-                  preset:
-                    | "ultrafast"
-                    | "superfast"
-                    | "veryfast"
-                    | "faster"
-                    | "fast"
-                    | "medium"
-                    | "slow"
-                    | "slower"
-                    | "veryslow";
-                  crf: number;
-                }
-              | ({
-                  codec: "vp9";
-                  multithreading?: boolean;
-                } & (
-                  | {}
-                  | {
-                      deadline: "good" | "best";
-                      cpuUsed?: 0 | 1 | 2 | 3 | 4 | 5;
-                    }
-                  | {
-                      deadline: "realtime";
-                      cpuUsed?:
-                        | -8
-                        | -7
-                        | -6
-                        | -5
-                        | -4
-                        | -3
-                        | -2
-                        | -1
-                        | 0
-                        | 1
-                        | 2
-                        | 3
-                        | 4
-                        | 5
-                        | 6
-                        | 7
-                        | 8;
-                    }
-                ) &
-                  (
-                    | {
-                        // Average Bitrate mode.
-                        mode: "average-bitrate";
-                        bitrate: number;
-                      }
-                    | {
-                        // Constant Quality mode.
-                        mode: "constant-quality";
-                        crf: number;
-                      }
-                    | {
-                        // Constrained Quality mode with CRF.
-                        mode: "constrained-quality";
-                        crf: number;
-                        bitrate: string;
-                      }
-                    | {
-                        // Constrained Quality mode with bounded bitrate.
-                        mode: "constrained-quality";
-                        minBitrate: string;
-                        targetBitrate: string;
-                        maxBitrate: string;
-                      }
-                    | {
-                        // Constant Bitrate mode.
-                        mode: "constant-bitrate";
-                        bitrate: string;
-                      }
-                    | {
-                        // Lossless mode;
-                        mode: "lossless";
-                      }
-                  ))
-              | {
-                  codec: "gif";
-                  loop: boolean | number;
-                }
-            ))
-        ));
-    audio?:
-      | boolean
-      | ({
-          samplingRate?: number;
-          // Mix a single stereo stream into a mono stream.
-          downmix?: boolean;
-          filter?: string;
-        } & (
-          | {
-              codec: "aac";
-            }
-          | {
-              codec: "flac";
-            }
-          | {
-              codec: "libmp3lame";
-              quality: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-            }
-          | {
-              codec: "libopus";
-            }
-          | {
-              codec: "libvorbis";
-              quality: -1 | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
-            }
-          | {
-              codec: "pcm";
-              signedness: "s" | "u";
-              bits: 8 | 16 | 24 | 32 | 64;
-              // Omit if 8 bits.
-              endianness?: "be" | "le";
-            }
-          | {
-              codec: "copy";
-            }
-        ));
-    output: {
-      format?: string;
-      file: string;
-      start?: number;
-      duration?: number;
-      movflags?: (
-        | "default_base_moof"
-        | "disable_chpl"
-        | "empty_moov"
-        | "faststart"
-        | "frag_every_frame"
-        | "frag_keyframe"
-        | "negative_cts_offsets"
-        | "omit_tfhd_offset"
-        | "rtphint"
-        | "separate_moof"
-        | "skip_sidx"
-      )[];
-    };
-  }) => {
+  }: ConvertOpts) => {
     const args = new Array<string | number>();
 
     ifDefined(threads, (t) => args.push(`-threads`, t));
@@ -663,12 +669,22 @@ export class Ff {
     ifDefined(output.duration, (t) => args.push(`-t`, t.toFixed(3)));
     args.push(output.file);
 
+    return args.map(String);
+  };
+
+  convert = async ({
+    logLevel,
+    ...opts
+  }: ConvertOpts & {
+    logLevel?: FfmpegLogLevel;
+  }) => {
+    const args = this.buildConvertArgs(opts);
     await this.ffmpeg(logLevel, ...args);
   };
 
   private async ffmpeg(
     logLevel: FfmpegLogLevel = this.cfg.logLevel,
-    ...args: (string | number)[]
+    ...args: string[]
   ) {
     const fullArgs = [
       `-hide_banner`,
@@ -676,7 +692,7 @@ export class Ff {
       `-y`,
       `-loglevel`,
       logLevel,
-      ...args.map(String),
+      ...args,
     ];
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
@@ -684,8 +700,8 @@ export class Ff {
     await this.cfg.runCommandWithoutOutput(this.cfg.ffmpegCommand, fullArgs);
   }
 
-  private async ffprobe(...args: (string | number)[]) {
-    const fullArgs = [`-v`, `error`, ...args.map(String)];
+  private async ffprobe(...args: string[]) {
+    const fullArgs = [`-v`, `error`, ...args];
     if (this.cfg.logCommandBeforeRunning) {
       console.debug("+", this.cfg.ffprobeCommand, ...fullArgs);
     }
