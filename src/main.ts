@@ -207,6 +207,13 @@ type ConvertOpts = {
         end?: number;
       }
   );
+  map?: readonly {
+    exclude?: boolean;
+    input: number;
+    type?: "a" | "v";
+    stream?: number;
+    optional?: boolean;
+  }[];
   metadata: boolean;
   video?:
     | boolean
@@ -539,6 +546,7 @@ export class Ff {
   buildConvertArgs = ({
     threads,
     input,
+    map,
     metadata,
     video,
     audio,
@@ -561,6 +569,20 @@ export class Ff {
 
     // Metadata.
     !metadata && args.push(`-map_metadata`, -1);
+
+    // Map.
+    for (const m of map ?? []) {
+      args.push(
+        "-map",
+        [
+          m.exclude ? "-" : "",
+          m.input,
+          mapDefined(m.type, (t) => `:${t}`),
+          mapDefined(m.stream, (s) => `:${s}`),
+          m.optional ? "?" : "",
+        ].join("")
+      );
+    }
 
     // Video.
     if (typeof video == "boolean") {
