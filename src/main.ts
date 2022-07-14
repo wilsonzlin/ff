@@ -157,7 +157,7 @@ export type FfConfig = {
   ffprobeCommand: string;
   ffmpegCommand: string;
   logLevel: FfmpegLogLevel;
-  logCommandBeforeRunning: boolean;
+  logCommandBeforeRunning: boolean | ((args: string[]) => void);
   runCommandWithoutOutput: (
     command: string,
     args: string[]
@@ -384,6 +384,14 @@ export class Ff {
     this.cfg = createCfg(cfg);
   }
 
+  private commandLogger(args: string[]) {
+    if (typeof this.cfg.logCommandBeforeRunning == "function") {
+      this.cfg.logCommandBeforeRunning(args);
+    } else if (this.cfg.logCommandBeforeRunning) {
+      console.debug("+", ...args);
+    }
+  }
+
   probe = async (file: string): Promise<ffprobeOutput> =>
     JSON.parse(
       await this.ffprobe(
@@ -495,9 +503,7 @@ export class Ff {
         ? [output]
         : ["-f", output.format, output.path]),
     ].map(String);
-    if (this.cfg.logCommandBeforeRunning) {
-      console.debug("+", this.cfg.ffmpegCommand, ...args);
-    }
+    this.commandLogger([this.cfg.ffmpegCommand, ...args]);
     const out = await this.cfg.runCommandWithOutput(
       this.cfg.ffmpegCommand,
       args,
@@ -716,17 +722,13 @@ export class Ff {
       logLevel,
       ...args,
     ];
-    if (this.cfg.logCommandBeforeRunning) {
-      console.debug("+", this.cfg.ffmpegCommand, ...fullArgs);
-    }
+    this.commandLogger([this.cfg.ffmpegCommand, ...fullArgs]);
     await this.cfg.runCommandWithoutOutput(this.cfg.ffmpegCommand, fullArgs);
   }
 
   private async ffprobe(...args: string[]) {
     const fullArgs = [`-v`, `error`, ...args];
-    if (this.cfg.logCommandBeforeRunning) {
-      console.debug("+", this.cfg.ffprobeCommand, ...fullArgs);
-    }
+    this.commandLogger([this.cfg.ffprobeCommand, ...fullArgs]);
     const raw = await this.cfg.runCommandWithOutput(
       this.cfg.ffprobeCommand,
       fullArgs,
